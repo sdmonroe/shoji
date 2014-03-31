@@ -14,8 +14,18 @@ import org.apache.log4j.BasicConfigurator;
 public final class Constants {
 
 	public final static String LOGGER_FILENAME = "logger.properties";
-	public final static int KEY_MATERIAL_PRIVATE = 0;
-	public final static int KEY_MATERIAL_PARTNER_PUBLIC = 1;
+	public final static int KEY_MATERIAL_ARRAY_SIZE = 5;
+	public final static int KEY_MATERIAL_LOCAL_KEY_AGREEMENT = 0;
+	public final static int KEY_MATERIAL_PRIVATE = 1;
+	public final static int KEY_MATERIAL_PUBLIC = 2;
+	// public final static int KEY_MATERIAL_PARTNER_PUBLIC = 3;
+	public final static int KEY_MATERIAL_SHARED_SECRET = 3;
+	public final static int KEY_MATERIAL_SECRET_HASH = 4;
+
+	// key phases
+	public final static int KEY_PHASE_1 = 1;
+	public final static int KEY_PHASE_2 = 2;
+	public final static int KEY_PHASE_3 = 3;
 
 	// channels
 	public final static String CHANNEL_PREFIX_PRIVATE = "CHANNEL-PRIVATE."; // creates a private channel within a ring between two members with the same key

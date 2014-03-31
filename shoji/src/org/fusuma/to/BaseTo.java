@@ -42,7 +42,8 @@ public class BaseTo implements rice.p2p.commonapi.Message {
 	}
 
 	public String toString() {
-		return "Plain message from " + this.from + " to " + this.to + "\n" + "Data: " + this.data;
+		String s = "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MESSAGE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
+		return "\nFrom: " + this.from + "\nTo: " + this.to + "\nData:\n\n" + this.data;
 	}
 
 	/**

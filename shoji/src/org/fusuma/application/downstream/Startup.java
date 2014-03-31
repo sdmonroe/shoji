@@ -5,11 +5,15 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import javax.crypto.KeyAgreement;
+import javax.crypto.interfaces.DHPrivateKey;
+import javax.crypto.interfaces.DHPublicKey;
+
 import org.apache.log4j.Logger;
 import org.fusuma.application.KeyExchange;
 import org.fusuma.crypto.DiffieHellman;
 import org.fusuma.shoji.globals.Constants;
-import org.fusuma.to.DHPrivateKey;
+import org.fusuma.to.DHKeyMaterial;
 
 import rice.environment.Environment;
 import rice.pastry.NodeHandle;
@@ -59,7 +63,7 @@ public class Startup {
 
 		// construct a new MyApp
 		Client c = new Client(node);
-		KeyExchange m = c.createKeyExchange(KeyExchange.MODE_PUBLIC);
+		KeyExchange kex = c.createKeyExchange(KeyExchange.MODE_PUBLIC);
 
 		node.boot(bootaddress);
 
@@ -107,13 +111,15 @@ public class Startup {
 				NodeHandle nh = leafSet.get(i);
 
 				// send the message directly to the node
-				DHPrivateKey dhpriv = DiffieHellman.generatePrivateKey();
+				Object[] keyMaterial = DiffieHellman.generatePhase1Material();
+				DHKeyMaterial dm = new DHKeyMaterial(kex.getEndpoint().getId(), nh.getId(), (DHPrivateKey) keyMaterial[Constants.KEY_MATERIAL_PRIVATE], (DHPublicKey) keyMaterial[Constants.KEY_MATERIAL_PUBLIC], (KeyAgreement) keyMaterial[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT]);
 				// logger.info(this + " Shared Secret generated for sender: " + dhpriv.getSharedSecret());
-
-				m.dispatch(nh, dhpriv);
-
+				dm.setPhase(Constants.KEY_PHASE_1);
+				kex.dispatchPublicMaterial(nh, dm);
 				// wait a sec
 				env.getTimeSource().sleep(1000);
+				break;
+
 			}
 		}
 	}

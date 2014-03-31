@@ -138,7 +138,7 @@ public class StartRing {
 				Id randId = nidFactory.generateNodeId();
 
 				// send to that key
-				m.dispatch(randId, new BaseTo(m.getEndpoint().getId(), randId, "This tests the VM ring"));
+				m.dispatchPublicMaterial(randId, new BaseTo(m.getEndpoint().getId(), randId, "This tests the VM ring"));
 
 				// wait a bit
 				env.getTimeSource().sleep(100);
@@ -166,7 +166,7 @@ public class StartRing {
 					NodeHandle nh = leafSet.get(i);
 
 					// send the message directly to the node
-					m.dispatch(nh, new BaseTo(m.getEndpoint().getId(), nh.getId(), "Another VM ring test"));
+					m.dispatchPublicMaterial(nh, new BaseTo(m.getEndpoint().getId(), nh.getId(), "Another VM ring test"));
 
 					// wait a bit
 					env.getTimeSource().sleep(100);

@@ -86,7 +86,7 @@ public class Startup {
 			Id randId = nidFactory.generateNodeId();
 
 			// send to that key
-			m.dispatch(randId, new BaseTo(m.getEndpoint().getId(), randId, "Boooh yahhhhhhh this stuff really works"));
+			m.dispatchPublicMaterial(randId, new BaseTo(m.getEndpoint().getId(), randId, "Boooh yahhhhhhh this stuff really works"));
 
 			// wait a sec
 			env.getTimeSource().sleep(1000);
@@ -106,7 +106,7 @@ public class Startup {
 				NodeHandle nh = leafSet.get(i);
 
 				// send the message directly to the node
-				m.dispatch(nh, new BaseTo(m.getEndpoint().getId(), nh.getId(), "Some more data for you to show this stuff really does work!!"));
+				m.dispatchPublicMaterial(nh, new BaseTo(m.getEndpoint().getId(), nh.getId(), "Some more data for you to show this stuff really does work!!"));
 
 				// wait a sec
 				env.getTimeSource().sleep(1000);
