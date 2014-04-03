@@ -46,7 +46,7 @@ import org.apache.log4j.Logger;
 import org.fusuma.application.KeyExchange;
 import org.fusuma.node.Node;
 import org.fusuma.shoji.globals.Constants;
-import org.fusuma.to.BaseTo;
+import org.fusuma.to.message.BaseMessage;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.Id;
@@ -78,7 +78,7 @@ public class StartRing {
 	 *            the IP:port of the node to boot from
 	 * @param numNodes
 	 *            the number of nodes to create in this JVM
-	 * @param env
+	 * @param environment
 	 *            the environment for these nodes
 	 */
 	public StartRing(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
@@ -90,7 +90,7 @@ public class StartRing {
 		// construct the PastryNodeFactory, this is how we use rice.pastry.socket
 		PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
-		// loop to construct the nodes/apps
+		// loop to construct the nodes/conversations
 		for (int curNode = 0; curNode < numNodes; curNode++) {
 			// construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
 			PastryNode node = factory.newNode();
@@ -120,7 +120,7 @@ public class StartRing {
 		env.getTimeSource().sleep(10000);
 
 		Client foo = (Client) apps.get(0);
-		KeyExchange msngr = foo.createKeyExchange(KeyExchange.MODE_PUBLIC);
+		KeyExchange msngr = foo.createKeyExchange();
 		logger.info(((PastryNode) msngr.getNode()).getRoutingTable().printSelf());
 
 		System.exit(0);
@@ -132,13 +132,13 @@ public class StartRing {
 			Iterator<Client> appIterator = apps.iterator();
 			while (appIterator.hasNext()) {
 				Client app = appIterator.next();
-				KeyExchange m = app.createKeyExchange(KeyExchange.MODE_PUBLIC);
+				KeyExchange m = app.createKeyExchange();
 
-				// pick a key at random
+				// pick a keys at random
 				Id randId = nidFactory.generateNodeId();
 
-				// send to that key
-				m.dispatchPublicMaterial(randId, new BaseTo(m.getEndpoint().getId(), randId, "This tests the VM ring"));
+				// send to that keys
+				m.dispatchPublicMaterial(randId, new BaseMessage(m.getEndpoint().getId(), randId, "This tests the VM ring"));
 
 				// wait a bit
 				env.getTimeSource().sleep(100);
@@ -151,7 +151,7 @@ public class StartRing {
 		Iterator<Client> appIterator = apps.iterator();
 		while (appIterator.hasNext()) {
 			Client c = appIterator.next();
-			KeyExchange m = c.createKeyExchange(KeyExchange.MODE_PUBLIC);
+			KeyExchange m = c.createKeyExchange();
 
 			Node node = (Node) m.getNode();
 
@@ -166,7 +166,7 @@ public class StartRing {
 					NodeHandle nh = leafSet.get(i);
 
 					// send the message directly to the node
-					m.dispatchPublicMaterial(nh, new BaseTo(m.getEndpoint().getId(), nh.getId(), "Another VM ring test"));
+					m.dispatchPublicMaterial(nh, new BaseMessage(m.getEndpoint().getId(), nh.getId(), "Another VM ring test"));
 
 					// wait a bit
 					env.getTimeSource().sleep(100);

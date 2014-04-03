@@ -11,8 +11,8 @@ import javax.crypto.interfaces.DHPublicKey;
 import org.apache.log4j.Logger;
 import org.fusuma.crypto.DiffieHellman;
 import org.fusuma.shoji.globals.Constants;
-import org.fusuma.to.BaseTo;
-import org.fusuma.to.DHKeyMaterial;
+import org.fusuma.to.message.BaseMessage;
+import org.fusuma.to.message.DHKeyMaterial;
 
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.Message;
@@ -41,55 +41,20 @@ public class KeyExchange extends AbstractApplication {
 	 */
 	HashMap<Id, Object[]> keys = new HashMap<Id, Object[]>();
 	HashMap<String, Id> privateChannelIds = new HashMap<String, Id>();
-	int mode = -1;
-
-	public final static int MODE_PUBLIC = 100;
-	public final static int MODE_PRIVATE = 200;
-
-	/**
-	 * @param node
-	 * @param channel
-	 * @throws ApplicationException
-	 */
-	KeyExchange(Node node, String channel) throws ApplicationException {
-		this.node = node;
-		// We are only going to use one instance of this application on each PastryNode
-		this.endpoint = node.buildEndpoint(this, channel);
-		this.mode = KeyExchange.MODE_PRIVATE;
-
-		// listen for messages
-		listen();
-	}
 
 	/**
 	 * @param node
 	 * @param mode
 	 * @throws ApplicationException
 	 */
-	KeyExchange(Node node, int mode) throws ApplicationException {
+	KeyExchange(Node node) throws ApplicationException {
 		this.node = node;
 		// We are only going to use one instance of this application on each PastryNode
-		this.mode = mode;
-		joinChannel(node, mode);
+		this.channel = Constants.CHANNEL_DH_PUBLIC_KEY_EXCHANGE;
+		this.endpoint = node.buildEndpoint(this, channel.toString());
 
 		// listen for messages
 		listen();
-	}
-
-	/**
-	 * @param node
-	 * @param mode
-	 * @throws ApplicationException
-	 */
-	public void joinChannel(Node node, int mode) throws ApplicationException {
-		switch (mode) {
-			case KeyExchange.MODE_PUBLIC:
-				this.channel = Constants.CHANNEL_PUBLIC_KEY_EXCHANGE;
-				break;
-			default:
-				throw new ApplicationException("Invalid mode: " + mode);
-		}
-		this.endpoint = node.buildEndpoint(this, channel);
 	}
 
 	/**
@@ -128,8 +93,9 @@ public class KeyExchange extends AbstractApplication {
 			to = nid;
 		}
 		else logger.info(this + " null receiver!");
-		if (message instanceof BaseTo) {
-			BaseTo b = (BaseTo) message;
+		if (message instanceof BaseMessage) {
+			BaseMessage b = (BaseMessage) message;
+			b.setChannel(getChannel());
 			if (b.isSelfAddressed()) {
 				logger.info(this + "dropping self-addressed message");
 				return;
@@ -145,21 +111,24 @@ public class KeyExchange extends AbstractApplication {
 					local[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT] = keyMaterial.getLocalKeyAgreement();
 					updateKeyMap(to, local);
 				}
-				logger.info(this + " sending to " + to);
-				logger.info(new Date() + " -- " + this + " dispatching DHKeyMaterial " + keyMaterial.extractPublicKey());
-				endpoint.route(nid, keyMaterial.extractPublicKey(), nh);
+				// logger.info(this + " sending to " + to);
+				// logger.info(new Date() + " -- " + this + " dispatching DHKeyMaterial " + keyMaterial.extractPublicKey());
+				DHKeyMaterial dhkm = keyMaterial.extractPublicKey();
+				dhkm.setTimestamp(new Date());
+				endpoint.route(nid, dhkm, nh);
 				return;
 			}
 			else {
-				endpoint.route(nid, message, nh);
+				endpoint.route(nid, b, nh);
 				return;
 			}
 		}
 		else {
+			((BaseMessage) message).setTimestamp(new Date());
 			endpoint.route(nid, message, nh);
 			return;
 		}
-		// Message data = new BaseTo(endpoint.getId(), id);
+		// Message data = new BaseMessage(endpoint.getId(), id);
 	}
 
 	// /**
@@ -167,7 +136,7 @@ public class KeyExchange extends AbstractApplication {
 	// */
 	// public void dispatch(NodeHandle nh, Message msg) {
 	// logger.info(this + " sending direct to " + nh);
-	// // Message data = new BaseTo(endpoint.getId(), nh.getId());
+	// // Message data = new BaseMessage(endpoint.getId(), nh.getId());
 	// endpoint.route(null, msg, nh);
 	// }
 
@@ -176,74 +145,78 @@ public class KeyExchange extends AbstractApplication {
 	 */
 	@Override
 	public void deliver(Id from, Message message) {
-		if (message instanceof BaseTo) {
-			BaseTo b = (BaseTo) message;
+		if (message instanceof BaseMessage) {
+			BaseMessage b = (BaseMessage) message;
 			if (b.isSelfAddressed()) return;
 			if (b instanceof DHKeyMaterial) {
 				DHKeyMaterial partnerKeyMaterial = (DHKeyMaterial) b;
-				logger.info(new Date() + " -- " + this + " received DHKeyMaterial " + partnerKeyMaterial);
+				// logger.info(new Date() + " -- " + this + " received DHKeyMaterial " + partnerKeyMaterial);
 				Object[] local = new Object[0];
-				switch (getMode()) {
-					case KeyExchange.MODE_PRIVATE:
-						String privateChannelId = parsePrivateChannelId();
-						Id mappedId = getId(privateChannelId);
-						if (mappedId == null || !mappedId.equals(((BaseTo) message).getFrom())) break;
-						break;
-					case KeyExchange.MODE_PUBLIC:
-						switch (partnerKeyMaterial.getPhase()) {
-							case Constants.KEY_PHASE_1:
-								// o = new Object[2];
-								// o[Constants.KEY_MATERIAL_PARTNER_PUBLIC] = partnerKeyMaterial;
-								if (getKeyMaterial(partnerKeyMaterial.getFrom()) != null) return; // if a key sync has already been initiated for the sender, do not accept sender's key sync initiation proposal
-								local = DiffieHellman.generatePhase2Material(partnerKeyMaterial.getPublicKey());
-								// logger.info(this + " Shared Secret generated for receiver 1: " + new String(((byte[]) o[Constants.KEY_MATERIAL_SHARED_SECRET])));
-								try {
-									// DHPrivateKey privKey = ((DHPrivateKey) o[Constants.KEY_MATERIAL_PRIVATE]);
-									// add the private channel
 
-									BaseTo bto = new BaseTo(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), "The channel is now open.");
-									enterChannel(partnerKeyMaterial, local).dispatch(partnerKeyMaterial.getFrom(), bto);
-									// send exponent across the public channel
-									DHKeyMaterial dm = new DHKeyMaterial(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), (DHPrivateKey) local[Constants.KEY_MATERIAL_PRIVATE], (DHPublicKey) local[Constants.KEY_MATERIAL_PUBLIC], (KeyAgreement) local[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT]);
-									dm.setSharedSecret((byte[]) local[Constants.KEY_MATERIAL_SHARED_SECRET]);
-									dm.setSecretHash((byte[]) local[Constants.KEY_MATERIAL_SECRET_HASH]);
-									dm.setPhase(Constants.KEY_PHASE_2);
-									// logger.info(this + " Shared Secret generated for sender: " + new String(dm.getSharedSecret()));
-									dispatchPublicMaterial(partnerKeyMaterial.getFrom(), dm);
-								}
-								catch (ApplicationException e) {
-									logger.error("Error creating key exchange: " + e.getMessage(), e);
-								}
-								break;
-							case Constants.KEY_PHASE_2:
-								local = getKeyMaterial(partnerKeyMaterial.getFrom());
-								DiffieHellman.generatePhase3Material(((KeyAgreement) local[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT]), partnerKeyMaterial.getPublicKey(), local);
-								String they = new String(partnerKeyMaterial.getSharedSecret());
-								String me = new String(((byte[]) local[Constants.KEY_MATERIAL_SHARED_SECRET]));
-								// logger.info(new Date() + " -- " + "Me:" + me);
-								// logger.info(new Date() + " -- " + "They: " + they);
-								// logger.info(new Date() + " -- " + this + " Shared Secrets match 2: " + me.equals(they));
-								// logger.info(new Date() + " -- " + this + " Key Material G match 2: " + partnerKeyMaterial.getPublicKey().getParams().getG().equals(((DHPrivateKey) local[Constants.KEY_MATERIAL_PRIVATE]).getParams().getG()));
-								// logger.info(new Date() + " -- " + this + " Key Material P match 2: " + partnerKeyMaterial.getPublicKey().getParams().getP().equals(((DHPrivateKey) local[Constants.KEY_MATERIAL_PRIVATE]).getParams().getP()));
-								try {
-									BaseTo bto = new BaseTo(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), "I'm here!! Anyone home?");
-									enterChannel(partnerKeyMaterial, local).dispatch(partnerKeyMaterial.getFrom(), bto);
-								}
-								catch (ApplicationException e) {
-									logger.error("Error creating key exchange: " + e.getMessage(), e);
-								}
-								// o[Constants.KEY_MATERIAL_PARTNER_PUBLIC] = partnerKeyMaterial;
-								// o[Constants.KEY_MATERIAL_PRIVATE] = DiffieHellman.generateSharedSecret((DHPrivateKey) o[Constants.KEY_MATERIAL_PRIVATE], (DHKeyMaterial) o[Constants.KEY_MATERIAL_PARTNER_PUBLIC]);
-								// logger.info(this + " Shared Secret generated for receiver 2: " + new String(((byte[]) o[Constants.KEY_MATERIAL_SHARED_SECRET])));
-								break;
+				switch (partnerKeyMaterial.getPhase()) {
+					case Constants.KEY_PHASE_1:
+						// o = new Object[2];
+						// o[Constants.KEY_MATERIAL_PARTNER_PUBLIC] = partnerKeyMaterial;
+						if (getKeyMaterial(partnerKeyMaterial.getFrom()) != null) return; // if a keys sync has already been initiated for the sender, do not accept sender's keys sync initiation proposal
+						local = DiffieHellman.generatePhase2Material(partnerKeyMaterial.getPublicKey());
+						// logger.info(this + " Shared Secret generated for receiver 1: " + new String(((byte[]) o[Constants.KEY_MATERIAL_SHARED_SECRET])));
+						try {
+							// DHPrivateKey privKey = ((DHPrivateKey) o[Constants.KEY_MATERIAL_PRIVATE]);
+							// add the private channel
+
+							BaseMessage bto = new BaseMessage(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), "The channel is now open.");
+							MessageExchange mex = joinChannel(partnerKeyMaterial, local);
+							mex.dispatch(partnerKeyMaterial.getFrom(), bto);
+							// send exponent across the public channel
+							DHKeyMaterial dm = new DHKeyMaterial(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), (DHPrivateKey) local[Constants.KEY_MATERIAL_PRIVATE], (DHPublicKey) local[Constants.KEY_MATERIAL_PUBLIC], (KeyAgreement) local[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT]);
+							dm.setSharedSecret((byte[]) local[Constants.KEY_MATERIAL_SHARED_SECRET]);
+							dm.setSecretHash((byte[]) local[Constants.KEY_MATERIAL_SECRET_HASH]);
+							dm.setPhase(Constants.KEY_PHASE_2);
+							// logger.info(this + " Shared Secret generated for sender: " + new String(dm.getSharedSecret()));
+							dispatchPublicMaterial(partnerKeyMaterial.getFrom(), dm);
 						}
-
-						updateKeyMap(partnerKeyMaterial.getFrom(), local);
-
+						catch (ApplicationException e) {
+							logger.error("Error creating keys exchange: " + e.getMessage(), e);
+						}
+						break;
+					case Constants.KEY_PHASE_2:
+						local = getKeyMaterial(partnerKeyMaterial.getFrom());
+						DiffieHellman.generatePhase3Material(((KeyAgreement) local[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT]), partnerKeyMaterial.getPublicKey(), local);
+						String they = new String(partnerKeyMaterial.getSharedSecret());
+						String me = new String(((byte[]) local[Constants.KEY_MATERIAL_SHARED_SECRET]));
+						// logger.info(new Date() + " -- " + "Me:" + me);
+						// logger.info(new Date() + " -- " + "They: " + they);
+						// logger.info(new Date() + " -- " + this + " Shared Secrets match 2: " + me.equals(they));
+						// logger.info(new Date() + " -- " + this + " Key Material G match 2: " + partnerKeyMaterial.getPublicKey().getParams().getG().equals(((DHPrivateKey) local[Constants.KEY_MATERIAL_PRIVATE]).getParams().getG()));
+						// logger.info(new Date() + " -- " + this + " Key Material P match 2: " + partnerKeyMaterial.getPublicKey().getParams().getP().equals(((DHPrivateKey) local[Constants.KEY_MATERIAL_PRIVATE]).getParams().getP()));
+						try {
+							BaseMessage bto = new BaseMessage(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), "I'm here!! Anyone home?");
+							MessageExchange mex = joinChannel(partnerKeyMaterial, local);
+							mex.dispatch(partnerKeyMaterial.getFrom(), bto);
+						}
+						catch (ApplicationException e) {
+							logger.error("Error creating keys exchange: " + e.getMessage(), e);
+						}
+						// o[Constants.KEY_MATERIAL_PARTNER_PUBLIC] = partnerKeyMaterial;
+						// o[Constants.KEY_MATERIAL_PRIVATE] = DiffieHellman.generateSharedSecret((DHPrivateKey) o[Constants.KEY_MATERIAL_PRIVATE], (DHKeyMaterial) o[Constants.KEY_MATERIAL_PARTNER_PUBLIC]);
+						// logger.info(this + " Shared Secret generated for receiver 2: " + new String(((byte[]) o[Constants.KEY_MATERIAL_SHARED_SECRET])));
 						break;
 				}
+
+				updateKeyMap(partnerKeyMaterial.getFrom(), local);
+
+				// switch (getMode()) {
+				// case KeyExchange.MODE_PRIVATE:
+				// String privateChannelId = parsePrivateChannelId();
+				// Id mappedId = getId(privateChannelId);
+				// if (mappedId == null || !mappedId.equals(((BaseMessage) message).getFrom())) break;
+				// break;
+				// case KeyExchange.MODE_PUBLIC:
+				//
+				// break;
+				// }
 			}
-			else if (b instanceof BaseTo) {
+			else if (b instanceof BaseMessage) {
 
 			}
 		}
@@ -254,16 +227,17 @@ public class KeyExchange extends AbstractApplication {
 	 * @param local
 	 * @throws ApplicationException
 	 */
-	public MessageExchange enterChannel(DHKeyMaterial partnerKeyMaterial, Object[] local) throws ApplicationException {
+	public MessageExchange joinChannel(DHKeyMaterial partnerKeyMaterial, Object[] local) throws ApplicationException {
 		String pcid = new String((byte[]) local[Constants.KEY_MATERIAL_SECRET_HASH]);
+		pcid = pcid.replace("\n", "");
 		addPrivateChannel(pcid, partnerKeyMaterial.getFrom());
 		// begin listening on the private channel
-		return new MessageExchange(node, Constants.CHANNEL_PREFIX_PRIVATE + pcid);
+		return new MessageExchange(node, Constants.createURI(Constants.CHANNEL_PREFIX_PRIVATE + pcid));
 	}
 
-	public String parsePrivateChannelId() {
-		return getChannel().substring(Constants.CHANNEL_PREFIX_PRIVATE.length() + 1);
-	}
+	// public URI parsePrivateChannelId() {
+	// return Constants.createURI(getChannel().toString().substring(Constants.CHANNEL_PREFIX_PRIVATE.toString().length() + 1));
+	// }
 
 	/**
 	 * Called when you hear about a new neighbor. Don't worry about this method for now.
@@ -298,14 +272,6 @@ public class KeyExchange extends AbstractApplication {
 
 	public void setKeys(HashMap<Id, Object[]> keys) {
 		this.keys = keys;
-	}
-
-	public int getMode() {
-		return mode;
-	}
-
-	public void setMode(int mode) {
-		this.mode = mode;
 	}
 
 	public Id getId(String privateChannelId) {

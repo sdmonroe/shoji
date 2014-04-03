@@ -4,24 +4,27 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Date;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Vector;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.KeyExchange;
+import org.fusuma.application.scribe.Conversation;
+import org.fusuma.application.scribe.ScribeExchange;
 import org.fusuma.shoji.globals.Constants;
-import org.fusuma.to.BaseTo;
+import org.fusuma.to.message.ScribeMessage;
 
 import rice.environment.Environment;
-import rice.p2p.commonapi.Id;
-import rice.pastry.NodeHandle;
+import rice.p2p.commonapi.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
 import rice.pastry.PastryNodeFactory;
-import rice.pastry.leafset.LeafSet;
 import rice.pastry.socket.SocketPastryNodeFactory;
 import rice.pastry.standard.RandomNodeIdFactory;
 
 /**
- * This tutorial shows how to setup a FreePastry node using the Socket Protocol.
+ * This tutorial shows how to use Scribe.
  * 
  * @author Jeff Hoye
  */
@@ -38,16 +41,25 @@ public class Startup {
 	static Logger logger = Logger.getLogger(Startup.class);
 
 	/**
-	 * This constructor sets up a PastryNode. It will bootstrap to an existing ring if it can find one at the specified location, otherwise it will start a new ring.
+	 * this will keep track of our Scribe applications
+	 */
+	Vector<Conversation> conversations = new Vector<Conversation>();
+
+	/**
+	 * Based on the rice.tutorial.lesson4.DistTutorial
+	 * 
+	 * This constructor launches numNodes PastryNodes. They will bootstrap to an existing ring if one exists at the specified location, otherwise it will start a new ring.
 	 * 
 	 * @param bindport
 	 *            the local port to bind to
 	 * @param bootaddress
 	 *            the IP:port of the node to boot from
+	 * @param numNodes
+	 *            the number of nodes to create in this JVM
 	 * @param env
-	 *            the environment for these nodes
+	 *            the Environment
 	 */
-	public Startup(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
+	public Startup(int bindport, InetSocketAddress bootaddress, int numNodes, Environment env) throws Exception {
 
 		// Generate the NodeIds Randomly
 		NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
@@ -55,12 +67,18 @@ public class Startup {
 		// construct the PastryNodeFactory, this is how we use rice.pastry.socket
 		PastryNodeFactory factory = new SocketPastryNodeFactory(nidFactory, bindport, env);
 
-		// construct a node
+		// loop to construct the nodes/conversations
+		// for (int curNode = 0; curNode < numNodes; curNode++) {
+		// construct a new node
 		PastryNode node = factory.newNode();
 
-		// construct a new MyApp
+		// construct a new exchange application
 		Server s = new Server(node);
-		KeyExchange m = s.createKeyExchange(KeyExchange.MODE_PUBLIC);
+		ScribeExchange se = s.createScribeExchange(Constants.SCRIBE_TOPIC_PUBLIC_KEYS);
+		Conversation cvn = se.joinConversation(Constants.SCRIBE_TOPIC_CIPHERTEXTS);
+		// Conversation c2 = se.joinConversation(Constants.SCRIBE_TOPIC_PUBLIC_KEYS);
+		conversations.add(cvn);
+		// conversations.add(c2);
 
 		node.boot(bootaddress);
 
@@ -75,50 +93,97 @@ public class Startup {
 			}
 		}
 
-		logger.info("Finished creating new node " + node);
+		logger.info("Finished creating new node: " + node);
+		// }
 
-		// wait 10 seconds
-		env.getTimeSource().sleep(1000);
+		// for the first app subscribe then start the publishtask
+		// Iterator<conversations> i = conversations.iterator();
+		// conversations exchange = (conversations) i.next();
+		// exchange.subscribe();
+		// exchange.startPublishTask();
+		// for all the rest just subscribe
+		// for (Conversation c : conversations) {
+		// // exchange = (conversations) i.next();
+		// }
+		env.getTimeSource().sleep(10000);
+		for (Conversation c : conversations) {
+			// exchange = (conversations) i.next();
+			// exchange.subscribe();
+			ScribeMessage message = new ScribeMessage(c.getExchange().getEndpoint().getId());
+			message.setData("I'm here? " + new Date() + " - my id = " + c.getExchange().getEndpoint().getId());
+			c.sendMulticast(message);
+			c.sendAnycast(message);
 
-		// route 10 messages
-		for (int i = 0; i < 10; i++) {
-			// pick a key at random
-			Id randId = nidFactory.generateNodeId();
+			c.sendMulticast(s.getPublicKey());
+			c.sendAnycast(s.getPublicKey());
 
-			// send to that key
-			m.dispatchPublicMaterial(randId, new BaseTo(m.getEndpoint().getId(), randId, "Boooh yahhhhhhh this stuff really works"));
-
-			// wait a sec
-			env.getTimeSource().sleep(1000);
 		}
 
-		// wait 10 seconds
-		env.getTimeSource().sleep(1000);
+		// now, print the tree
+		env.getTimeSource().sleep(5000);
+		// printTree(conversations);
+	}
 
-		// send directly to my leafset
-		LeafSet leafSet = node.getLeafSet();
+	/**
+	 * Note that this function only works because we have global knowledge. Doing this in an actual distributed environment will take some more work.
+	 * 
+	 * @param conversations
+	 *            Vector of the applications.
+	 */
+	public static void printTree(Vector<Conversation> conversations) {
+		// build a hashtable of the conversations, keyed by nodehandle
+		Hashtable<NodeHandle, Conversation> appTable = new Hashtable<NodeHandle, Conversation>();
+		Iterator<Conversation> i = conversations.iterator();
+		while (i.hasNext()) {
+			Conversation c = (Conversation) i.next();
+			appTable.put(c.getExchange().getEndpoint().getLocalNodeHandle(), c);
+		}
+		NodeHandle seed = ((Conversation) conversations.get(0)).getExchange().getEndpoint().getLocalNodeHandle();
 
-		// this is a typical loop to cover your leafset. Note that if the leafset
-		// overlaps, then duplicate nodes will be sent to twice
-		for (int i = -leafSet.ccwSize(); i <= leafSet.cwSize(); i++) {
-			if (i != 0) { // don't send to self
-				// select the item
-				NodeHandle nh = leafSet.get(i);
+		// get the root
+		NodeHandle root = getRoot(seed, appTable);
 
-				// send the message directly to the node
-				m.dispatchPublicMaterial(nh, new BaseTo(m.getEndpoint().getId(), nh.getId(), "Some more data for you to show this stuff really does work!!"));
+		// print the tree from the root down
+		recursivelyPrintChildren(root, 0, appTable);
+	}
 
-				// wait a sec
-				env.getTimeSource().sleep(1000);
-			}
+	/**
+	 * Recursively crawl up the tree to find the root.
+	 */
+	public static NodeHandle getRoot(NodeHandle seed, Hashtable<NodeHandle, Conversation> appTable) {
+		Conversation c = (Conversation) appTable.get(seed);
+		// if (c == null) return seed;
+		if (c.isRoot()) return seed;
+		NodeHandle nextSeed = c.getParent();
+		return getRoot(nextSeed, appTable);
+	}
+
+	/**
+	 * Print's self, then children.
+	 */
+	public static void recursivelyPrintChildren(NodeHandle curNode, int recursionDepth, Hashtable<NodeHandle, Conversation> appTable) {
+		// print self at appropriate tab level
+		String s = "";
+		for (int numTabs = 0; numTabs < recursionDepth; numTabs++) {
+			s += "  ";
+		}
+		s += curNode.getId().toString();
+		logger.info(s);
+
+		// recursively print all children
+		Conversation c = (Conversation) appTable.get(curNode);
+		// if (c == null) return;
+		NodeHandle[] children = c.getChildren();
+		for (int curChild = 0; curChild < children.length; curChild++) {
+			recursivelyPrintChildren(children[curChild], recursionDepth + 1, appTable);
 		}
 	}
 
 	/**
-	 * Usage: java [-cp FreePastry-<version>.jar] rice.tutorial.lesson3.DistTutorial localbindport bootIP bootPort example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
+	 * Usage: java [-cp FreePastry- <version>.jar] rice.tutorial.lesson6.ScribeTutorial localbindport bootIP bootPort numNodes example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001
 	 */
 	public static void main(String[] args) throws Exception {
-		// Loads pastry settings
+		// Loads pastry configurations
 		Environment env = new Environment();
 
 		// disable the UPnP setting (in case you are testing this on a NATted LAN)
@@ -133,14 +198,17 @@ public class Startup {
 			int bootport = Integer.parseInt(args[2]);
 			InetSocketAddress bootaddress = new InetSocketAddress(bootaddr, bootport);
 
+			// the port to use locally
+			int numNodes = Integer.parseInt(args[3]);
+
 			// launch our node!
-			Startup dt = new Startup(bindport, bootaddress, env);
+			Startup dt = new Startup(bindport, bootaddress, numNodes, env);
 		}
 		catch (Exception e) {
 			// remind user how to use
-			logger.error("Usage:");
-			logger.error("java [-cp FreePastry-<version>.jar] rice.tutorial.lesson3.DistTutorial localbindport bootIP bootPort");
-			logger.error("example java rice.tutorial.DistTutorial 9001 pokey.cs.almamater.edu 9001");
+			logger.info("Usage:");
+			logger.info("java [-cp FreePastry-<version>.jar] rice.tutorial.scribe.ScribeTutorial localbindport bootIP bootPort numNodes");
+			logger.info("example java rice.tutorial.scribe.ScribeTutorial 9001 pokey.cs.almamater.edu 9001 10");
 			throw e;
 		}
 	}

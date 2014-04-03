@@ -1,4 +1,7 @@
-package org.fusuma.to;
+package org.fusuma.to.message;
+
+import java.net.URI;
+import java.util.Date;
 
 import org.apache.log4j.Logger;
 
@@ -10,8 +13,8 @@ import rice.p2p.commonapi.Message;
  * 
  * @author Jeff Hoye
  */
-public class BaseTo implements rice.p2p.commonapi.Message {
-	protected static transient Logger logger = Logger.getLogger(BaseTo.class);
+public class BaseMessage implements rice.p2p.commonapi.Message {
+	protected static transient Logger logger = Logger.getLogger(BaseMessage.class);
 	/**
 	 * Where the Message came from.
 	 */
@@ -21,16 +24,20 @@ public class BaseTo implements rice.p2p.commonapi.Message {
 	 */
 	Id to;
 
-	String data;
+	Date timestamp;
+
+	URI channel;
+
+	Object data;
 
 	/**
 	 * Constructor.
 	 */
-	public BaseTo(Id from, Id to) {
+	public BaseMessage(Id from, Id to) {
 		this(from, to, null);
 	}
 
-	public BaseTo(Id from, Id to, String data) {
+	public BaseMessage(Id from, Id to, Object data) {
 		this.from = from;
 		this.to = to;
 		this.data = data;
@@ -43,7 +50,7 @@ public class BaseTo implements rice.p2p.commonapi.Message {
 
 	public String toString() {
 		String s = "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MESSAGE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
-		return "\nFrom: " + this.from + "\nTo: " + this.to + "\nData:\n\n" + this.data;
+		return s + "\nFrom: " + this.from + "\nTo: " + this.to + "\nTimestamp: " + this.timestamp + "\nChannel:" + this.channel + "\nData:\n\n" + this.data;
 	}
 
 	/**
@@ -53,11 +60,11 @@ public class BaseTo implements rice.p2p.commonapi.Message {
 		return Message.LOW_PRIORITY;
 	}
 
-	public String getData() {
+	public Object getData() {
 		return data;
 	}
 
-	public void setData(String data) {
+	public void setData(Object data) {
 		this.data = data;
 	}
 
@@ -75,5 +82,21 @@ public class BaseTo implements rice.p2p.commonapi.Message {
 
 	public void setTo(Id to) {
 		this.to = to;
+	}
+
+	public URI getChannel() {
+		return channel;
+	}
+
+	public void setChannel(URI channel) {
+		this.channel = channel;
+	}
+
+	public Date getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(Date timestamp) {
+		this.timestamp = timestamp;
 	}
 }

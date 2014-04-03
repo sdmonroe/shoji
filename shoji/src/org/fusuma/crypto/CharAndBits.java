@@ -135,7 +135,7 @@ public class CharAndBits implements Comparable<CharAndBits> {
 	}
 
 	/**
-	 * To perform the Xor between 2 arrays of EasyCharcter and return an String with the 2 arrays XORed The first parameter is the message, the second the key The array returned will have the size of the message if the key is smaller than the message a wrapAround will occur
+	 * To perform the Xor between 2 arrays of EasyCharcter and return an String with the 2 arrays XORed The first parameter is the message, the second the keys The array returned will have the size of the message if the keys is smaller than the message a wrapAround will occur
 	 */
 	public static String xorArray(CharAndBits[] msg, CharAndBits[] key) {
 		// check for null or no length message
@@ -144,15 +144,15 @@ public class CharAndBits implements Comparable<CharAndBits> {
 		int msgLen = msg.length;
 		StringBuilder sb = new StringBuilder(msgLen);
 
-		// check for null or empty key in that case just return a copy of our message
+		// check for null or empty keys in that case just return a copy of our message
 		if (key == null || key.length == 0) {
 			for (CharAndBits ea : msg)
 				sb.append(ea.theChar);
 			return sb.toString();
 		}
-		// get length of the key and create new array
+		// get length of the keys and create new array
 		int keyLen = key.length;
-		// loop to perform the XOR between each element of the data array and the key with wrap around
+		// loop to perform the XOR between each element of the data array and the keys with wrap around
 		for (int i = 0; i < msgLen; i++) {
 			int val = msg[i].intValue ^ key[i % keyLen].intValue;
 			sb.append((char) val);

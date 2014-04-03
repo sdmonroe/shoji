@@ -1,5 +1,8 @@
 package org.fusuma.application;
 
+import java.net.URI;
+
+import org.apache.log4j.Logger;
 import org.fusuma.shoji.globals.Constants;
 
 import rice.p2p.commonapi.Application;
@@ -7,11 +10,27 @@ import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.Node;
 
 public abstract class AbstractApplication implements Application {
-	protected String channel = null;
+	static Logger logger = Logger.getLogger(AbstractApplication.class);
+	// static {
+	// try {
+	// Class.forName("org.fusuma.to.BaseTo"); // be sure to load TO's into classloader
+	// }
+	// catch (ClassNotFoundException e) {
+	// logger.error(e.getMessage(), e);
+	// }
+	// }
+	protected URI channel = null;
 	protected AbstractApplicationManager appManager;
 	protected Endpoint endpoint;
 	protected Node node;
-	protected static boolean isListening = false;
+	protected boolean isListening = false;
+
+	public AbstractApplication(Node node, URI channel) {
+		this.node = node;
+		this.channel = channel;
+		this.endpoint = node.buildEndpoint(this, channel.toString());
+		listen();
+	}
 
 	public AbstractApplication() {
 		this.channel = Constants.CHANNEL_GENERAL;
@@ -21,21 +40,17 @@ public abstract class AbstractApplication implements Application {
 	 * 
 	 */
 	public void listen() {
-		if (!AbstractApplication.isListening) {
+		if (!this.isListening) {
 			this.endpoint.register();
 		}
-		AbstractApplication.isListening = true;
+		this.isListening = true;
 	}
 
-	public void joinChannel(String channel) {
-		setChannel(channel);
-	}
-
-	public String getChannel() {
+	public URI getChannel() {
 		return channel;
 	}
 
-	protected void setChannel(String channel) {
+	protected void setChannel(URI channel) {
 		this.channel = channel;
 	}
 
@@ -43,7 +58,7 @@ public abstract class AbstractApplication implements Application {
 		return appManager;
 	}
 
-	void setApplicationManager(AbstractApplicationManager applicationManager) {
+	public void setApplicationManager(AbstractApplicationManager applicationManager) {
 		this.appManager = applicationManager;
 	}
 

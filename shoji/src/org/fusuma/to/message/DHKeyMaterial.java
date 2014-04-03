@@ -1,4 +1,4 @@
-package org.fusuma.to;
+package org.fusuma.to.message;
 
 import javax.crypto.KeyAgreement;
 import javax.crypto.interfaces.DHPrivateKey;
@@ -7,7 +7,7 @@ import javax.crypto.interfaces.DHPublicKey;
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.Message;
 
-public class DHKeyMaterial extends BaseTo {
+public class DHKeyMaterial extends BaseMessage {
 
 	private javax.crypto.interfaces.DHPublicKey publicKey;
 	private javax.crypto.interfaces.DHPrivateKey privateKey;

@@ -72,8 +72,8 @@ public class DiffieHellman {
 	// // MessageDigest hash = MessageDigest.getInstance("SHA1", "BC");
 	// // // logger.info(new String(hash.digest(aKeyAgree.generateSecret())));
 	// // // logger.info("Format: " + aPair.getPublic().getFormat());
-	// // String key = new String(aPair.getPublic().getEncoded());
-	// // // logger.info("Key: " + key);
+	// // String keys = new String(aPair.getPublic().getEncoded());
+	// // // logger.info("Key: " + keys);
 	// //
 	// // // byte[] certData = aPair.getPublic().getEncoded();
 	// // // X509Certificate cert = X509Certificate.getInstance(certData);
@@ -116,13 +116,13 @@ public class DiffieHellman {
 	// // MessageDigest hash = MessageDigest.getInstance("SHA1", "BC");
 	// // logger.info(new String(hash.digest(aKeyAgree.generateSecret())));
 	// // logger.info("Format: " + aPair.getPublic().getFormat());
-	// // String key = new String(aPair.getPublic().getEncoded());
-	// DHPrivateKey privateKey = null;
-	// // if (pk instanceof org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPrivateKey) privateKey = new DHPrivateKey(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), (org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPrivateKey) pk);
+	// // String keys = new String(aPair.getPublic().getEncoded());
+	// DHPrivateKey keys = null;
+	// // if (pk instanceof org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPrivateKey) keys = new DHPrivateKey(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), (org.bouncycastle.jcajce.provider.asymmetric.dh.BCDHPrivateKey) pk);
 	// // else if (pk instanceof javax.crypto.interfaces.DHPrivateKey)
-	// privateKey = new DHPrivateKey(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), (javax.crypto.interfaces.DHPrivateKey) pk); // send this key back to the partner
-	// privateKey.updateKeyMaterial(pub);
-	// return generateSharedSecret(privateKey, partnerKeyMaterial);
+	// keys = new DHPrivateKey(partnerKeyMaterial.getTo(), partnerKeyMaterial.getFrom(), (javax.crypto.interfaces.DHPrivateKey) pk); // send this keys back to the partner
+	// keys.updateKeyMaterial(pub);
+	// return generateSharedSecret(keys, partnerKeyMaterial);
 	// }
 	// catch (Exception ex) {
 	// logger.error(ex.getMessage(), ex);
@@ -131,18 +131,18 @@ public class DiffieHellman {
 	// return null;
 	// }
 	//
-	// public static Object[] generateKeyMaterial(javax.crypto.interfaces.DHPublicKey partnerKey, javax.crypto.interfaces.DHPrivateKey privateKey) {
+	// public static Object[] generateKeyMaterial(javax.crypto.interfaces.DHPublicKey partnerKey, javax.crypto.interfaces.DHPrivateKey keys) {
 	// try {
 	// // KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH", "BC");
 	// KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
 	// // KeyPair aPair = keyGen.generateKeyPair();
-	// aKeyAgree.init(privateKey);
+	// aKeyAgree.init(keys);
 	// // bKeyAgree.init(bPair.getPrivate());
 	//
 	// // boolean match = dhParams.getG().equals(pk.getParams().getG()) && dhParams.getP().equals(pk.getParams().getP());
 	// // logger.info("Components match: " + match);
 	// DHPublicKey pub = (DHPublicKey) aKeyAgree.doPhase(partnerKey, false);
-	// return new Object[] { privateKey, pub, generateSharedSecret(partnerKey, privateKey, false) };
+	// return new Object[] { keys, pub, generateSharedSecret(partnerKey, keys, false) };
 	// }
 	// catch (Exception ex) {
 	// logger.error(ex.getMessage(), ex);
@@ -233,19 +233,19 @@ public class DiffieHellman {
 
 	}
 
-	// public static byte[] generateSharedSecret(javax.crypto.interfaces.DHPublicKey partnerKey, javax.crypto.interfaces.DHPrivateKey privateKey, boolean last) {
+	// public static byte[] generateSharedSecret(javax.crypto.interfaces.DHPublicKey partnerKey, javax.crypto.interfaces.DHPrivateKey keys, boolean last) {
 	//
 	// try {
-	// // DHKeyMaterial key = new DHKeyMaterial();
+	// // DHKeyMaterial keys = new DHKeyMaterial();
 	//
-	// // logger.info("Key: " + key);
+	// // logger.info("Key: " + keys);
 	//
 	// // byte[] certData = aPair.getPublic().getEncoded();
 	// // X509Certificate cert = X509Certificate.getInstance(certData);
 	//
-	// // privateKey.setPublicKey(partnerKeyMaterial.getPublicKey());
+	// // keys.setPublicKey(partnerKeyMaterial.getPublicKey());
 	// KeyAgreement aKeyAgree = KeyAgreement.getInstance("DH", "BC");
-	// aKeyAgree.init(privateKey);
+	// aKeyAgree.init(keys);
 	// javax.crypto.interfaces.DHPrivateKey pk = (javax.crypto.interfaces.DHPrivateKey) aKeyAgree.doPhase(partnerKey, last);
 	// return aKeyAgree.generateSecret();
 	// }
@@ -255,7 +255,7 @@ public class DiffieHellman {
 	//
 	// return new byte[0];
 	//
-	// // PemReader pemReader = new PemReader(new StringReader(key));
+	// // PemReader pemReader = new PemReader(new StringReader(keys));
 	// // Object obj = pemReader.readPemObject();
 	// // pemReader.close();
 	// // if (obj instanceof X509Certificate) {
