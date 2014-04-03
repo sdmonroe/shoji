@@ -1,19 +1,19 @@
-package org.fusuma.application.upstream;
+package org.fusuma.channel.upstream;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.scribe.Conversation;
-import org.fusuma.application.scribe.ScribeExchange;
+import org.fusuma.channel.scribe.Conversation;
+import org.fusuma.channel.scribe.ScribeChannel;
 import org.fusuma.shoji.globals.Constants;
-import org.fusuma.to.message.ScribeMessage;
+import org.fusuma.to.message.PublicKey;
+import org.fusuma.to.message.ScribePost;
 
 import rice.environment.Environment;
 import rice.p2p.commonapi.NodeHandle;
@@ -72,10 +72,11 @@ public class Startup {
 		// construct a new node
 		PastryNode node = factory.newNode();
 
-		// construct a new exchange application
+		// construct a new channel application
 		Server s = new Server(node);
-		ScribeExchange se = s.createScribeExchange(Constants.SCRIBE_TOPIC_PUBLIC_KEYS);
-		Conversation cvn = se.joinConversation(Constants.SCRIBE_TOPIC_CIPHERTEXTS);
+		s.joinDHChannel(); // join the DH key exchange channel and listen for clients initiating key exchanges
+		ScribeChannel sc = s.joinScribeChannel(Constants.CHANNEL_DEFAULT_SERVER_SCRIBE);
+		Conversation cvn = sc.joinConversation(Constants.SCRIBE_TOPIC_PUBLIC_KEYS);
 		// Conversation c2 = se.joinConversation(Constants.SCRIBE_TOPIC_PUBLIC_KEYS);
 		conversations.add(cvn);
 		// conversations.add(c2);
@@ -98,24 +99,28 @@ public class Startup {
 
 		// for the first app subscribe then start the publishtask
 		// Iterator<conversations> i = conversations.iterator();
-		// conversations exchange = (conversations) i.next();
-		// exchange.subscribe();
-		// exchange.startPublishTask();
+		// conversations channel = (conversations) i.next();
+		// channel.subscribe();
+		// channel.startPublishTask();
 		// for all the rest just subscribe
 		// for (Conversation c : conversations) {
-		// // exchange = (conversations) i.next();
+		// // channel = (conversations) i.next();
 		// }
 		env.getTimeSource().sleep(10000);
 		for (Conversation c : conversations) {
-			// exchange = (conversations) i.next();
-			// exchange.subscribe();
-			ScribeMessage message = new ScribeMessage(c.getExchange().getEndpoint().getId());
-			message.setData("I'm here? " + new Date() + " - my id = " + c.getExchange().getEndpoint().getId());
+			// channel = (conversations) i.next();
+			// channel.subscribe();
+			ScribePost message = new ScribePost(c.getChannel().getEndpoint().getId());
+			message.setChannel(c.getChannel().getUid());
+			message.setData("Scribe exchange joined.");
 			c.sendMulticast(message);
-			c.sendAnycast(message);
+			// c.sendAnycast(message);
 
-			c.sendMulticast(s.getPublicKey());
-			c.sendAnycast(s.getPublicKey());
+			PublicKey pk = s.getPublicKey();
+			pk.setChannel(c.getChannel().getUid());
+
+			c.sendMulticast(pk);
+			// c.sendAnycast(pk);
 
 		}
 
@@ -136,9 +141,9 @@ public class Startup {
 		Iterator<Conversation> i = conversations.iterator();
 		while (i.hasNext()) {
 			Conversation c = (Conversation) i.next();
-			appTable.put(c.getExchange().getEndpoint().getLocalNodeHandle(), c);
+			appTable.put(c.getChannel().getEndpoint().getLocalNodeHandle(), c);
 		}
-		NodeHandle seed = ((Conversation) conversations.get(0)).getExchange().getEndpoint().getLocalNodeHandle();
+		NodeHandle seed = ((Conversation) conversations.get(0)).getChannel().getEndpoint().getLocalNodeHandle();
 
 		// get the root
 		NodeHandle root = getRoot(seed, appTable);

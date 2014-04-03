@@ -1,10 +1,9 @@
-package org.fusuma.application.scribe;
+package org.fusuma.channel.scribe;
 
 import java.net.URI;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.AbstractApplication;
-import org.fusuma.shoji.globals.Constants;
+import org.fusuma.channel.AbstractChannel;
 import org.fusuma.to.message.PublishContent;
 
 import rice.p2p.commonapi.Id;
@@ -15,8 +14,8 @@ import rice.p2p.commonapi.RouteMessage;
 import rice.p2p.scribe.Scribe;
 import rice.p2p.scribe.ScribeImpl;
 
-public class ScribeExchange extends AbstractApplication {
-	static Logger logger = Logger.getLogger(ScribeExchange.class);
+public class ScribeChannel extends AbstractChannel {
+	static Logger logger = Logger.getLogger(ScribeChannel.class);
 	// static {
 	// try {
 	// Class.forName("org.fusuma.to.BaseTo"); // be sure to load TO's into classloader
@@ -28,16 +27,16 @@ public class ScribeExchange extends AbstractApplication {
 	protected boolean isListening = false;
 	protected Scribe scribe = null;
 
-	// public ScribeExchange(Node node, String channel) {
-	// this(node, Constants.SCRIBE_DEFAULT_INSTANCE_ID, channel);
+	// public ScribeChannel(Node node, String uid) {
+	// this(node, Constants.SCRIBE_DEFAULT_INSTANCE_ID, uid);
 	// }
 
-	public ScribeExchange(Node node, URI channel) {
+	public ScribeChannel(Node node, URI channel) {
 		super(node, channel);
-		scribe = new ScribeImpl(node, Constants.SCRIBE_DEFAULT_CHANNEL);
+		scribe = new ScribeImpl(node, channel.toString());
 		// this.channel = Constants.SCRIBE_DEFAULT_CHANNEL;
-		// this.endpoint = node.buildEndpoint(this, channel);
-		// listen();
+		// this.endpoint = node.buildEndpoint(this, uid);
+		listen();
 	}
 
 	/**

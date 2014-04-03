@@ -8,7 +8,7 @@ import rice.p2p.scribe.ScribeContent;
 /**
  * @author Jeff Hoye
  */
-public class ScribeMessage extends BaseMessage implements ScribeContent {
+public class ScribePost extends BaseMessage implements ScribeContent {
 
 	/**
 	 * Simple constructor. Typically, you would also like some interesting payload for your application.
@@ -21,7 +21,7 @@ public class ScribeMessage extends BaseMessage implements ScribeContent {
 
 	ScribeTopic topic;
 
-	public ScribeMessage(Id from) {
+	public ScribePost(Id from) {
 		super(from, null, null);
 		// System.out.println(this+".ctor");
 	}
@@ -30,7 +30,7 @@ public class ScribeMessage extends BaseMessage implements ScribeContent {
 	 * A String representation of this object
 	 */
 	public String toString() {
-		return super.toString();
+		return super.toString() + "\nTopic: " + this.topic;
 	}
 
 	public ScribeTopic getTopic() {

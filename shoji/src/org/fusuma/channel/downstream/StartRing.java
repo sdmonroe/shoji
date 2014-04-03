@@ -1,4 +1,4 @@
-package org.fusuma.application.downstream;
+package org.fusuma.channel.downstream;
 
 /*******************************************************************************
 
@@ -43,7 +43,7 @@ import java.util.Iterator;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.KeyExchange;
+import org.fusuma.channel.DHChannel;
 import org.fusuma.node.Node;
 import org.fusuma.shoji.globals.Constants;
 import org.fusuma.to.message.BaseMessage;
@@ -95,7 +95,7 @@ public class StartRing {
 			// construct a node, passing the null boothandle on the first loop will cause the node to start its own ring
 			PastryNode node = factory.newNode();
 
-			// construct a new KeyExchange
+			// construct a new DHChannel
 			Client app = new Client(node);
 
 			apps.add(app);
@@ -120,7 +120,7 @@ public class StartRing {
 		env.getTimeSource().sleep(10000);
 
 		Client foo = (Client) apps.get(0);
-		KeyExchange msngr = foo.createKeyExchange();
+		DHChannel msngr = foo.joinDHChannel();
 		logger.info(((PastryNode) msngr.getNode()).getRoutingTable().printSelf());
 
 		System.exit(0);
@@ -132,12 +132,12 @@ public class StartRing {
 			Iterator<Client> appIterator = apps.iterator();
 			while (appIterator.hasNext()) {
 				Client app = appIterator.next();
-				KeyExchange m = app.createKeyExchange();
+				DHChannel m = app.joinDHChannel();
 
-				// pick a keys at random
+				// pick a sharedKeys at random
 				Id randId = nidFactory.generateNodeId();
 
-				// send to that keys
+				// send to that sharedKeys
 				m.dispatchPublicMaterial(randId, new BaseMessage(m.getEndpoint().getId(), randId, "This tests the VM ring"));
 
 				// wait a bit
@@ -151,7 +151,7 @@ public class StartRing {
 		Iterator<Client> appIterator = apps.iterator();
 		while (appIterator.hasNext()) {
 			Client c = appIterator.next();
-			KeyExchange m = c.createKeyExchange();
+			DHChannel m = c.joinDHChannel();
 
 			Node node = (Node) m.getNode();
 

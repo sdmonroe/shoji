@@ -2,7 +2,7 @@ package org.fusuma.to.message;
 
 import rice.p2p.commonapi.Id;
 
-public class PublicKey extends ScribeMessage implements java.security.PublicKey {
+public class PublicKey extends ScribePost implements java.security.PublicKey {
 
 	private String format;
 	private String algorithm;

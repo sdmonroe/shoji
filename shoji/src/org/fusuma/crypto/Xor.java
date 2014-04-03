@@ -22,11 +22,11 @@ import org.fusuma.shoji.globals.Constants;
  * 
  * Let us verify this assertion with all possible versions of 0 and 1 Message: 1100 Key: 1010 ---- XOR Msg and Key: 0110 this is the encrypted message
  * 
- * Now let's XOR the encrypted message with the keys Encrypted message: 0110 Key: 1010 ---- XOR 1100 back to the original message
+ * Now let's XOR the encrypted message with the sharedKeys Encrypted message: 0110 Key: 1010 ---- XOR 1100 back to the original message
  * 
- * One big thing about this mechanism is that the process to encode is exactly the same as the one to decode we just XOR with the keys both the message to encode and the message to decode. No need for a Encode() method and a Decode() method. The same one is used and the method does not need to know if it is actually encoding or decoding.
+ * One big thing about this mechanism is that the process to encode is exactly the same as the one to decode we just XOR with the sharedKeys both the message to encode and the message to decode. No need for a Encode() method and a Decode() method. The same one is used and the method does not need to know if it is actually encoding or decoding.
  * 
- * In this tutorial we will just play with this XOR feature to encode/decode messages For that we will use a keys if the keys is smaller than the message we just repeat it So the encode "Hello world" with the keys "Dave" we will use as keys "DaveDaveDav" The following console application uses this technique As in the previous tutorial we will used the CharAndBits class to output as a series of 0 and 1 the bits contained in a character.
+ * In this tutorial we will just play with this XOR feature to encode/decode messages For that we will use a sharedKeys if the sharedKeys is smaller than the message we just repeat it So the encode "Hello world" with the sharedKeys "Dave" we will use as sharedKeys "DaveDaveDav" The following console application uses this technique As in the previous tutorial we will used the CharAndBits class to output as a series of 0 and 1 the bits contained in a character.
  * 
  * If you have already the CharAndBits.java class/file from the previous tutotial, take this new one, it has new functionnalities. The new version still support the code from tutorial V so you can erase the old one, take the new one, and the code of SwapAndRotate will still work.
  * 
@@ -34,22 +34,22 @@ import org.fusuma.shoji.globals.Constants;
 public class Xor {
 	static Logger logger = Logger.getLogger(Xor.class);
 
-	// the keys used for encrypt/decrypt
+	// the sharedKeys used for encrypt/decrypt
 	private String key;
 
 	/**
-	 * Constructor that receives the keys as parameter
+	 * Constructor that receives the sharedKeys as parameter
 	 */
 	public Xor(String key) {
-		// call common method to set the initial keys or change it
+		// call common method to set the initial sharedKeys or change it
 		setKey(key);
 	}
 
 	/**
-	 * Method to set the original keys and permit to change it on the fly
+	 * Method to set the original sharedKeys and permit to change it on the fly
 	 */
 	private void setKey(String key) {
-		// avoid null keys
+		// avoid null sharedKeys
 		if (key == null) key = "";
 		// save it
 		this.key = key;
@@ -57,15 +57,15 @@ public class Xor {
 	}
 
 	/**
-	 * Method that one-time pad on the message based on the registered keys Contrary to other coding mechanisms seen in the previous tutorials the mechanism to encode and decode is the same wo we do not need an encode and a decode method. The same method can be used for both operations
+	 * Method that one-time pad on the message based on the registered sharedKeys Contrary to other coding mechanisms seen in the previous tutorials the mechanism to encode and decode is the same wo we do not need an encode and a decode method. The same method can be used for both operations
 	 */
 	public String otp(String msg) {
 		// validate that the message is not null or length == 0
 		// if it is the case, just return the original message
 		if (msg == null || msg.length() == 0) return msg;
-		// if the keys is "" we return the original message
+		// if the sharedKeys is "" we return the original message
 		if (key.length() == 0) return msg;
-		// make an array of CharAndBits from both the message and the keys
+		// make an array of CharAndBits from both the message and the sharedKeys
 		CharAndBits[] m = CharAndBits.newCharAndBitsArray(msg);
 		CharAndBits[] k = CharAndBits.newCharAndBitsArray(key);
 		// and call the method that performs the XOR operation
@@ -74,10 +74,10 @@ public class Xor {
 	}
 
 	/**
-	 * A quick and dirty method to return the keys duplicated enough times so it will have the length of the message. This is just for printing purpose only both in the main() method and in the GUI. The method is not involved in the encoding/decoding process itself
+	 * A quick and dirty method to return the sharedKeys duplicated enough times so it will have the length of the message. This is just for printing purpose only both in the main() method and in the GUI. The method is not involved in the encoding/decoding process itself
 	 */
 	private String dupKey(int msgLen) {
-		// if the keys is invalid no
+		// if the sharedKeys is invalid no
 		if (key.length() == 0) return "";
 		String dup = key;
 		while (dup.length() < msgLen)
@@ -97,14 +97,14 @@ public class Xor {
 		// create the Xor object
 		Xor xor = new Xor(key);
 
-		// for print out purpose only get the keys used (it will be as log as the message)
+		// for print out purpose only get the sharedKeys used (it will be as log as the message)
 		String dupKey = xor.dupKey(msg.length());
-		logger.info("The original message is: \"" + msg + "\" the keys used will be \"" + dupKey + "\"");
+		logger.info("The original message is: \"" + msg + "\" the sharedKeys used will be \"" + dupKey + "\"");
 		// call the utility method for binary representation of the message
 		String msgInBin = CharAndBits.toBinaryString(msg);
 		logger.info(msgInBin);
 
-		// the repeated keys in binary
+		// the repeated sharedKeys in binary
 		String keyInBin = CharAndBits.toBinaryString(dupKey);
 		logger.info(keyInBin);
 		// build a series of -------
@@ -123,9 +123,9 @@ public class Xor {
 		logger.info("The encrypted message is: \"" + CharAndBits.toAsciiString(encoded) + "\"");
 
 		// now the reverse process
-		logger.info("The encoded message XORed with the keys");
+		logger.info("The encoded message XORed with the sharedKeys");
 		logger.info(encodedInBinary); // encoded message
-		logger.info(keyInBin); // keys in binary
+		logger.info(keyInBin); // sharedKeys in binary
 		logger.info(new String(dash)); // the ------------
 
 		// decode the encoded message calling the SAME method
@@ -138,9 +138,9 @@ public class Xor {
 		// Now prompting the user
 		Scanner scan = new Scanner(System.in);
 		String userKey;
-		// get a keys of length > 0 from the user
+		// get a sharedKeys of length > 0 from the user
 		do {
-			logger.info("Enter the keys to use: ");
+			logger.info("Enter the sharedKeys to use: ");
 			userKey = scan.nextLine();
 		}
 		while (userKey.length() == 0);
@@ -151,14 +151,14 @@ public class Xor {
 		logger.info("Enter message to encode: ");
 		String userMsg = scan.nextLine();
 
-		// generate the keys that will be used for print out purpose only
+		// generate the sharedKeys that will be used for print out purpose only
 		String userDupKey = userXor.dupKey(userMsg.length());
-		logger.info("The original message is: \"" + userMsg + "\" the keys used will be \"" + userDupKey + "\"");
+		logger.info("The original message is: \"" + userMsg + "\" the sharedKeys used will be \"" + userDupKey + "\"");
 		// call the utility method for binary representation of the message
 		String userMsgInBin = CharAndBits.toBinaryString(userMsg);
 		logger.info(userMsgInBin);
 
-		// the repeated keys in binary
+		// the repeated sharedKeys in binary
 		String userKeyInBin = CharAndBits.toBinaryString(userDupKey);
 		logger.info(userKeyInBin);
 		// build a series of -------
@@ -177,9 +177,9 @@ public class Xor {
 		logger.info("The encrypted message is: \"" + CharAndBits.toAsciiString(userEncoded) + "\"");
 
 		// now the reverse process
-		logger.info("The encoded message XORed with the keys");
+		logger.info("The encoded message XORed with the sharedKeys");
 		logger.info(userEncodedInBinary); // encoded message
-		logger.info(userKeyInBin); // keys in binary
+		logger.info(userKeyInBin); // sharedKeys in binary
 		logger.info(new String(userDash)); // the ------------
 
 		// decode the encoded message calling the SAME method

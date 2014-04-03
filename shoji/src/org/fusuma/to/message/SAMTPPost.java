@@ -9,12 +9,12 @@ import org.fusuma.to.SAMTPPad;
  * @author smonroe
  * 
  */
-public final class SAMTPMessage extends BaseMessage {
+public final class SAMTPPost extends BaseMessage {
 
 	private int nextLength = 0;
 	private transient String serverKeyXor;
 
-	public SAMTPMessage(SAMTPPad data, int nextLength) {
+	public SAMTPPost(SAMTPPad data, int nextLength) {
 		super(null, null);
 		this.data = data;
 		this.nextLength = nextLength;

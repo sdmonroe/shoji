@@ -1,10 +1,12 @@
-package org.fusuma.application;
+package org.fusuma.channel;
 
 import java.net.URI;
 import java.util.Date;
 
 import org.apache.log4j.Logger;
+import org.fusuma.channel.upstream.Server;
 import org.fusuma.to.message.BaseMessage;
+import org.fusuma.to.message.SAMTPPost;
 
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.Message;
@@ -12,12 +14,12 @@ import rice.p2p.commonapi.Node;
 import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.RouteMessage;
 
-public class MessageExchange extends AbstractApplication {
-	static Logger logger = Logger.getLogger(MessageExchange.class);
+public class GenericChannel extends AbstractChannel {
+	static Logger logger = Logger.getLogger(GenericChannel.class);
 
-	public MessageExchange(Node node, URI channel) throws ApplicationException {
+	public GenericChannel(Node node, URI channel) throws ChannelException {
 		this.node = node;
-		this.channel = channel;
+		this.uid = channel;
 
 		// We are only going to use one instance of this application on each PastryNode
 		this.endpoint = node.buildEndpoint(this, channel.toString());
@@ -60,9 +62,16 @@ public class MessageExchange extends AbstractApplication {
 			to = nid;
 		}
 		else logger.info(this + " null receiver!");
+		if (message instanceof SAMTPPost) {
+			SAMTPPost post = (SAMTPPost) message;
+			if (getApplicationManager() instanceof Server) {
+				Server server = (Server) getApplicationManager();
+				server.addClientPost(post);
+			}
+		}
 		if (message instanceof BaseMessage) {
 			BaseMessage b = (BaseMessage) message;
-			b.setChannel(getChannel());
+			b.setChannel(getUid());
 			logger.info(this + " sending to " + to);
 			logger.info(new Date() + " -- " + this + " dispatching BaseMessage " + b);
 			endpoint.route(nid, b, nh);
@@ -90,7 +99,7 @@ public class MessageExchange extends AbstractApplication {
 	}
 
 	public String toString() {
-		return "MessageExchange " + endpoint.getId();
+		return "GenericChannel " + endpoint.getId();
 	}
 
 }

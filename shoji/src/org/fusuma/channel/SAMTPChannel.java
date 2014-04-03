@@ -1,11 +1,11 @@
-package org.fusuma.application;
+package org.fusuma.channel;
 
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.Message;
 import rice.p2p.commonapi.NodeHandle;
 import rice.p2p.commonapi.RouteMessage;
 
-public class SAMTPExchange extends AbstractApplication {
+public class SAMTPChannel extends AbstractChannel {
 
 	@Override
 	public void deliver(Id arg0, Message arg1) {

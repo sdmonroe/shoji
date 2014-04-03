@@ -1,11 +1,11 @@
-package org.fusuma.application.scribe;
+package org.fusuma.channel.scribe;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.AbstractApplication;
+import org.fusuma.channel.AbstractChannel;
 import org.fusuma.shoji.globals.Constants;
 import org.fusuma.to.ScribeTopic;
 import org.fusuma.to.message.PublishContent;
-import org.fusuma.to.message.ScribeMessage;
+import org.fusuma.to.message.ScribePost;
 
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.Id;
@@ -21,11 +21,11 @@ import rice.p2p.scribe.Topic;
 import rice.pastry.commonapi.PastryIdFactory;
 
 /**
- * We implement the Application interface to receive regular timed messages (see lesson5). We implement the ScribeClient interface to receive exchange messages (called ScribeContent).
+ * We implement the Application interface to receive regular timed messages (see lesson5). We implement the ScribeClient interface to receive channel messages (called ScribeContent).
  * 
  * @author Jeff Hoye
  */
-public class ScribeExchangeTest extends AbstractApplication implements ScribeClient {
+public class ScribeExchangeTest extends AbstractChannel implements ScribeClient {
 	static Logger logger = Logger.getLogger(ScribeExchangeTest.class);
 	static {
 		try {
@@ -47,7 +47,7 @@ public class ScribeExchangeTest extends AbstractApplication implements ScribeCli
 	CancellableTask publishTask;
 
 	/**
-	 * My handle to a exchange impl.
+	 * My handle to a channel impl.
 	 */
 	Scribe scribe;
 
@@ -62,7 +62,7 @@ public class ScribeExchangeTest extends AbstractApplication implements ScribeCli
 	// public Endpoint endpoint;
 
 	/**
-	 * The constructor for this exchange client. It will construct the ScribeExchange.
+	 * The constructor for this channel client. It will construct the ScribeChannel.
 	 * 
 	 * @param node
 	 *            the PastryNode
@@ -111,7 +111,7 @@ public class ScribeExchangeTest extends AbstractApplication implements ScribeCli
 	/**
 	 * Sends the multicast message.
 	 */
-	public void sendMulticast(ScribeMessage message) {
+	public void sendMulticast(ScribePost message) {
 		logger.info("Node " + endpoint.getLocalNodeHandle() + " broadcasting " + seqNum);
 		scribe.publish(topic, message);
 		seqNum++;
@@ -122,8 +122,8 @@ public class ScribeExchangeTest extends AbstractApplication implements ScribeCli
 	 */
 	@Override
 	public void deliver(Topic topic, ScribeContent content) {
-		if (content instanceof ScribeMessage) {
-			ScribeMessage sm = (ScribeMessage) content;
+		if (content instanceof ScribePost) {
+			ScribePost sm = (ScribePost) content;
 			logger.info(getNode().getId() + " receiving message (" + topic + "," + sm + ")");
 			if (sm.getFrom() == null) {
 				new Exception("Stack Trace").printStackTrace();
@@ -134,9 +134,9 @@ public class ScribeExchangeTest extends AbstractApplication implements ScribeCli
 	/**
 	 * Sends an anycast message.
 	 */
-	public void sendAnycast(ScribeMessage message) {
+	public void sendAnycast(ScribePost message) {
 		logger.info("Node " + endpoint.getLocalNodeHandle() + " anycasting " + seqNum);
-		// ScribeMessage myMessage = new ScribeMessage(endpoint.getId(), seqNum);
+		// ScribePost myMessage = new ScribePost(endpoint.getId(), seqNum);
 		scribe.anycast(topic, message);
 		seqNum++;
 	}
@@ -176,16 +176,16 @@ public class ScribeExchangeTest extends AbstractApplication implements ScribeCli
 	// }
 	// }
 
-	/************ Some passthrough accessors for the exchange *************/
+	/************ Some passthrough accessors for the channel *************/
 	public boolean isRoot() {
 		return scribe.isRoot(topic);
 	}
 
 	public NodeHandle getParent() {
-		// NOTE: Was just added to the Scribe interface. May need to cast exchange to a
+		// NOTE: Was just added to the Scribe interface. May need to cast channel to a
 		// ScribeImpl if using 1.4.1_01 or older.
 		return ((ScribeImpl) scribe).getParent(topic);
-		// return exchange.getParent(topic);
+		// return channel.getParent(topic);
 	}
 
 	public NodeHandle[] getChildren() {

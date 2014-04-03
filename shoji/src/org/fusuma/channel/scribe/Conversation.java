@@ -1,16 +1,15 @@
-package org.fusuma.application.scribe;
+package org.fusuma.channel.scribe;
 
 import java.net.URI;
 import java.security.PublicKey;
-import java.util.Date;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.AbstractApplicationManager;
-import org.fusuma.application.upstream.Server;
+import org.fusuma.channel.AbstractChannelManager;
+import org.fusuma.channel.upstream.Server;
 import org.fusuma.shoji.globals.Constants;
 import org.fusuma.to.ScribeTopic;
 import org.fusuma.to.message.BaseMessage;
-import org.fusuma.to.message.ScribeMessage;
+import org.fusuma.to.message.ScribePost;
 
 import rice.p2p.commonapi.CancellableTask;
 import rice.p2p.commonapi.NodeHandle;
@@ -21,7 +20,7 @@ import rice.p2p.scribe.Topic;
 import rice.pastry.commonapi.PastryIdFactory;
 
 /**
- * We implement the Application interface to receive regular timed messages (see lesson5). We implement the ScribeClient interface to receive exchange messages (called ScribeContent).
+ * We implement the Application interface to receive regular timed messages (see lesson5). We implement the ScribeClient interface to receive channel messages (called ScribeContent).
  * 
  * @author Jeff Hoye
  */
@@ -47,9 +46,9 @@ public class Conversation implements ScribeClient {
 	CancellableTask publishTask;
 
 	/**
-	 * My handle to a exchange impl.
+	 * My handle to a channel impl.
 	 */
-	ScribeExchange exchange;
+	ScribeChannel channel;
 
 	/**
 	 * The only topic this appl is subscribing to.
@@ -62,21 +61,21 @@ public class Conversation implements ScribeClient {
 	// public Endpoint endpoint;
 
 	/**
-	 * The constructor for this exchange client. It will construct the ScribeExchange.
+	 * The constructor for this channel client. It will construct the ScribeChannel.
 	 * 
 	 * @param node
 	 *            the PastryNode
 	 */
-	Conversation(ScribeExchange exchange, URI scribeTopic) {
+	Conversation(ScribeChannel channel, URI topicUid) {
 		// this.node = node;
 		// this.endpoint = node.buildEndpoint(this, "myinstance");
 
 		// construct Scribe
-		// exchange = new ScribeImpl(node, "myScribeInstance");
-		this.exchange = exchange;
+		// channel = new ScribeImpl(node, "myScribeInstance");
+		this.channel = channel;
 
 		// construct the topic
-		topic = new ScribeTopic(new PastryIdFactory(this.exchange.getNode().getEnvironment()), scribeTopic);
+		topic = new ScribeTopic(new PastryIdFactory(getChannel().getNode().getEnvironment()), topicUid);
 		logger.info("topic = " + topic);
 
 		// now we can receive messages
@@ -87,7 +86,7 @@ public class Conversation implements ScribeClient {
 	 * Subscribes to topic.
 	 */
 	public void join() {
-		exchange.getScribe().subscribe(topic, this);
+		getChannel().getScribe().subscribe(getTopic(), this);
 	}
 
 	// /**
@@ -100,21 +99,23 @@ public class Conversation implements ScribeClient {
 	/**
 	 * Sends an anycast message.
 	 */
-	public void sendAnycast(ScribeMessage message) {
-		message.setTimestamp(new Date());
-		logger.info("Node " + getExchange().getEndpoint().getLocalNodeHandle() + " anycasting ");
-		// ScribeMessage myMessage = new ScribeMessage(endpoint.getId(), seqNum);
-		exchange.getScribe().anycast(topic, message);
+	public void sendAnycast(ScribePost message) {
+		message.setTimestamp();
+		message.setTopic(getTopic());
+		logger.info("Node " + getChannel().getEndpoint().getLocalNodeHandle() + " anycasting ");
+		// ScribePost myMessage = new ScribePost(endpoint.getId(), seqNum);
+		getChannel().getScribe().anycast(getTopic(), message);
 		// seqNum++;
 	}
 
 	/**
 	 * Sends the multicast message.
 	 */
-	public void sendMulticast(ScribeMessage message) {
-		message.setTimestamp(new Date());
-		logger.info("Node " + getExchange().getEndpoint().getLocalNodeHandle() + " broadcasting ");
-		exchange.getScribe().publish(topic, message);
+	public void sendMulticast(ScribePost message) {
+		message.setTimestamp();
+		message.setTopic(getTopic());
+		logger.info("Node " + getChannel().getEndpoint().getLocalNodeHandle() + " broadcasting ");
+		getChannel().getScribe().publish(getTopic(), message);
 		// seqNum++;
 	}
 
@@ -129,14 +130,14 @@ public class Conversation implements ScribeClient {
 				logger.info(this + "dropping self-addressed message");
 				return;
 			}
-			if (getExchange().getNode().getId().equals(b.getFrom())) {
+			if (getChannel().getNode().getId().equals(b.getFrom())) {
 				logger.info(this + "dropping message from self");
 				return;
 			}
-			if (content instanceof ScribeMessage) {
-				ScribeMessage sm = (ScribeMessage) content;
-				logger.info(getExchange().getNode().getId() + " receiving message (" + topic + "," + sm + ")");
-				AbstractApplicationManager appManager = getExchange().getApplicationManager();
+			if (content instanceof ScribePost) {
+				ScribePost sm = (ScribePost) content;
+				logger.info(getChannel().getNode().getId() + " receiving message (" + topic + "," + sm + ")");
+				AbstractChannelManager appManager = getChannel().getApplicationManager();
 				if (appManager instanceof Server) {
 					Server server = (Server) appManager;
 					if (topic instanceof ScribeTopic) {
@@ -162,7 +163,7 @@ public class Conversation implements ScribeClient {
 	 */
 	@Override
 	public boolean anycast(Topic topic, ScribeContent content) {
-		boolean returnValue = exchange.getScribe().getEnvironment().getRandomSource().nextInt(3) == 0;
+		boolean returnValue = getChannel().getScribe().getEnvironment().getRandomSource().nextInt(3) == 0;
 		// logger.info("conversations.anycast(" + topic + "," + content + "):" + returnValue);
 		return false;
 	}
@@ -182,28 +183,28 @@ public class Conversation implements ScribeClient {
 		// logger.info("conversations.childFailed("+topic+")");
 	}
 
-	/************ Some passthrough accessors for the exchange *************/
+	/************ Some passthrough accessors for the channel *************/
 	public boolean isRoot() {
-		return exchange.getScribe().isRoot(topic);
+		return getChannel().getScribe().isRoot(getTopic());
 	}
 
 	public NodeHandle getParent() {
-		// NOTE: Was just added to the Scribe interface. May need to cast exchange to a
+		// NOTE: Was just added to the Scribe interface. May need to cast channel to a
 		// ScribeImpl if using 1.4.1_01 or older.
-		return ((ScribeImpl) exchange.getScribe()).getParent(topic);
-		// return exchange.getParent(topic);
+		return ((ScribeImpl) getChannel().getScribe()).getParent(getTopic());
+		// return channel.getParent(topic);
 	}
 
 	public NodeHandle[] getChildren() {
-		return exchange.getScribe().getChildren(topic);
+		return getChannel().getScribe().getChildren(getTopic());
 	}
 
-	public ScribeExchange getExchange() {
-		return exchange;
+	public ScribeChannel getChannel() {
+		return channel;
 	}
 
-	public void setExchange(ScribeExchange exchange) {
-		this.exchange = exchange;
+	public void setChannel(ScribeChannel channel) {
+		this.channel = channel;
 	}
 
 	public ScribeTopic getTopic() {

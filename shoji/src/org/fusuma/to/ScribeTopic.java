@@ -26,4 +26,8 @@ public class ScribeTopic extends Topic {
 		this.uri = uri;
 	}
 
+	public String toString() {
+		return getUri() + " (" + super.toString() + ")";
+	}
+
 }

@@ -50,7 +50,7 @@ public class BaseMessage implements rice.p2p.commonapi.Message {
 
 	public String toString() {
 		String s = "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< MESSAGE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
-		return s + "\nFrom: " + this.from + "\nTo: " + this.to + "\nTimestamp: " + this.timestamp + "\nChannel:" + this.channel + "\nData:\n\n" + this.data;
+		return s + "\nFrom: " + this.from + ((this.to != null) ? "\nTo: " + this.to : "") + "\nTimestamp: " + this.timestamp + "\nChannel: " + this.channel + "\nData:\n\n" + this.data + "\n\n";
 	}
 
 	/**
@@ -94,6 +94,10 @@ public class BaseMessage implements rice.p2p.commonapi.Message {
 
 	public Date getTimestamp() {
 		return timestamp;
+	}
+
+	public void setTimestamp() {
+		setTimestamp(new Date());
 	}
 
 	public void setTimestamp(Date timestamp) {

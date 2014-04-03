@@ -1,4 +1,4 @@
-package org.fusuma.application;
+package org.fusuma.channel;
 
 import java.net.URI;
 
@@ -9,8 +9,8 @@ import rice.p2p.commonapi.Application;
 import rice.p2p.commonapi.Endpoint;
 import rice.p2p.commonapi.Node;
 
-public abstract class AbstractApplication implements Application {
-	static Logger logger = Logger.getLogger(AbstractApplication.class);
+public abstract class AbstractChannel implements Application {
+	static Logger logger = Logger.getLogger(AbstractChannel.class);
 	// static {
 	// try {
 	// Class.forName("org.fusuma.to.BaseTo"); // be sure to load TO's into classloader
@@ -19,21 +19,21 @@ public abstract class AbstractApplication implements Application {
 	// logger.error(e.getMessage(), e);
 	// }
 	// }
-	protected URI channel = null;
-	protected AbstractApplicationManager appManager;
+	protected URI uid = null;
+	protected AbstractChannelManager appManager;
 	protected Endpoint endpoint;
 	protected Node node;
 	protected boolean isListening = false;
 
-	public AbstractApplication(Node node, URI channel) {
+	public AbstractChannel(Node node, URI channel) {
 		this.node = node;
-		this.channel = channel;
+		this.uid = channel;
 		this.endpoint = node.buildEndpoint(this, channel.toString());
-		listen();
+		// listen();
 	}
 
-	public AbstractApplication() {
-		this.channel = Constants.CHANNEL_GENERAL;
+	public AbstractChannel() {
+		this.uid = Constants.CHANNEL_GENERAL;
 	}
 
 	/**
@@ -46,19 +46,19 @@ public abstract class AbstractApplication implements Application {
 		this.isListening = true;
 	}
 
-	public URI getChannel() {
-		return channel;
+	public URI getUid() {
+		return uid;
 	}
 
-	protected void setChannel(URI channel) {
-		this.channel = channel;
+	protected void setUid(URI channel) {
+		this.uid = channel;
 	}
 
-	public AbstractApplicationManager getApplicationManager() {
+	public AbstractChannelManager getApplicationManager() {
 		return appManager;
 	}
 
-	public void setApplicationManager(AbstractApplicationManager applicationManager) {
+	public void setApplicationManager(AbstractChannelManager applicationManager) {
 		this.appManager = applicationManager;
 	}
 

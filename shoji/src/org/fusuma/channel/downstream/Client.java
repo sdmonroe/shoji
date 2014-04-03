@@ -1,18 +1,18 @@
-package org.fusuma.application.downstream;
+package org.fusuma.channel.downstream;
 
 import java.security.SecureRandom;
 import java.util.LinkedHashMap;
 
 import org.apache.log4j.Logger;
-import org.fusuma.application.AbstractApplicationManager;
+import org.fusuma.channel.AbstractChannelManager;
 import org.fusuma.crypto.Xor;
 import org.fusuma.to.message.DHKeyMaterial;
-import org.fusuma.to.message.SAMTPMessage;
+import org.fusuma.to.message.SAMTPPost;
 
 import rice.p2p.commonapi.Id;
 import rice.p2p.commonapi.Node;
 
-public class Client extends AbstractApplicationManager {
+public class Client extends AbstractChannelManager {
 	static Logger logger = Logger.getLogger(Client.class);
 
 	/**
@@ -24,9 +24,10 @@ public class Client extends AbstractApplicationManager {
 
 	public Client(Node node) {
 		super(node);
-		SAMTPMessage msg = new SAMTPMessage(null, 0);
-		String serverKeyXor = XorServerKeys(msg.getPad().sumLengths());
-		msg.setServerKeyXor(serverKeyXor);
+		// SAMTPPost post = new SAMTPPost(null, 0);
+		// setMessage(post, "This is a test");
+		// String serverKeyXor = XorServerKeys(post.getPad().sumLengths());
+		// post.setServerKeyXor(serverKeyXor);
 	}
 
 	public String XorServerKeys(int length) {
@@ -68,8 +69,14 @@ public class Client extends AbstractApplicationManager {
 	 * 
 	 * @param s
 	 */
-	public void write(SAMTPMessage samtp, String msg) {
+	public void setMessage(SAMTPPost samtp, String msg) {
 		samtp.getPad().set(getSlot(), msg);
+	}
+
+	public void appendMessage(SAMTPPost samtp, String msg) {
+		String s = samtp.getPad().get(getSlot());
+		s += msg;
+		samtp.getPad().set(getSlot(), s);
 	}
 
 	public LinkedHashMap<Id, DHKeyMaterial> getServerKeys() {

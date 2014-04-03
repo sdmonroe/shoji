@@ -1,17 +1,23 @@
-package org.fusuma.application.upstream;
+package org.fusuma.channel.downstream;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import javax.crypto.KeyAgreement;
+import javax.crypto.interfaces.DHPrivateKey;
+import javax.crypto.interfaces.DHPublicKey;
+
 import org.apache.log4j.Logger;
-import org.fusuma.application.KeyExchange;
+import org.fusuma.channel.DHChannel;
+import org.fusuma.channel.scribe.Conversation;
+import org.fusuma.channel.scribe.ScribeChannel;
+import org.fusuma.crypto.DiffieHellman;
 import org.fusuma.shoji.globals.Constants;
-import org.fusuma.to.message.BaseMessage;
+import org.fusuma.to.message.DHKeyMaterial;
 
 import rice.environment.Environment;
-import rice.p2p.commonapi.Id;
 import rice.pastry.NodeHandle;
 import rice.pastry.NodeIdFactory;
 import rice.pastry.PastryNode;
@@ -25,7 +31,9 @@ import rice.pastry.standard.RandomNodeIdFactory;
  * 
  * @author Jeff Hoye
  */
-public class StartupHold {
+public class Startup {
+	public static Environment environment = new Environment();
+
 	static {
 		try {
 			Constants.configureLogger();
@@ -35,7 +43,7 @@ public class StartupHold {
 		catch (IOException e) {
 		}
 	}
-	static Logger logger = Logger.getLogger(StartupHold.class);
+	static Logger logger = Logger.getLogger(Startup.class);
 
 	/**
 	 * This constructor sets up a PastryNode. It will bootstrap to an existing ring if it can find one at the specified location, otherwise it will start a new ring.
@@ -47,8 +55,7 @@ public class StartupHold {
 	 * @param environment
 	 *            the environment for these nodes
 	 */
-	public StartupHold(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
-
+	public Startup(int bindport, InetSocketAddress bootaddress, Environment env) throws Exception {
 		// Generate the NodeIds Randomly
 		NodeIdFactory nidFactory = new RandomNodeIdFactory(env);
 
@@ -59,8 +66,11 @@ public class StartupHold {
 		PastryNode node = factory.newNode();
 
 		// construct a new MyApp
-		Server s = new Server(node);
-		KeyExchange m = s.createKeyExchange();
+		Client c = new Client(node);
+		DHChannel dc = c.joinDHChannel();
+		ScribeChannel sc = c.joinScribeChannel(Constants.CHANNEL_DEFAULT_CLIENT_SCRIBE);
+		// Conversation cvn = sc.joinConversation(Constants.SCRIBE_TOPIC_PUBLIC_KEYS);
+		Conversation cvn2 = sc.joinConversation(Constants.SCRIBE_TOPIC_REVEAL);
 
 		node.boot(bootaddress);
 
@@ -81,19 +91,21 @@ public class StartupHold {
 		env.getTimeSource().sleep(1000);
 
 		// route 10 messages
-		for (int i = 0; i < 10; i++) {
-			// pick a keys at random
-			Id randId = nidFactory.generateNodeId();
-
-			// send to that keys
-			m.dispatchPublicMaterial(randId, new BaseMessage(m.getEndpoint().getId(), randId, "Boooh yahhhhhhh this stuff really works"));
-
-			// wait a sec
-			env.getTimeSource().sleep(1000);
-		}
+		// for (int i = 0; i < 10; i++) {
+		// // pick a sharedKeys at random
+		// Id randId = nidFactory.generateNodeId();
+		//
+		// // send to that sharedKeys
+		// DHPrivateKey dhpriv = DiffieHellman.createPrivateKey();
+		// // logger.info(this + " Shared Secret generated for sender: " + dhpriv.getSharedSecret());
+		// m.dispatch(randId, dhpriv);
+		//
+		// // wait a sec
+		// environment.getTimeSource().sleep(1000);
+		// }
 
 		// wait 10 seconds
-		env.getTimeSource().sleep(1000);
+		env.getTimeSource().sleep(10000);
 
 		// send directly to my leafset
 		LeafSet leafSet = node.getLeafSet();
@@ -106,10 +118,15 @@ public class StartupHold {
 				NodeHandle nh = leafSet.get(i);
 
 				// send the message directly to the node
-				m.dispatchPublicMaterial(nh, new BaseMessage(m.getEndpoint().getId(), nh.getId(), "Some more data for you to show this stuff really does work!!"));
-
+				Object[] keyMaterial = DiffieHellman.generatePhase1Material();
+				DHKeyMaterial dm = new DHKeyMaterial(dc.getEndpoint().getId(), nh.getId(), (DHPrivateKey) keyMaterial[Constants.KEY_MATERIAL_PRIVATE], (DHPublicKey) keyMaterial[Constants.KEY_MATERIAL_PUBLIC], (KeyAgreement) keyMaterial[Constants.KEY_MATERIAL_LOCAL_KEY_AGREEMENT]);
+				// logger.info(this + " Shared Secret generated for sender: " + dhpriv.getSharedSecret());
+				dm.setPhase(Constants.KEY_PHASE_1);
+				dc.dispatchPublicMaterial(nh, dm);
 				// wait a sec
 				env.getTimeSource().sleep(1000);
+				break;
+
 			}
 		}
 	}
@@ -119,10 +136,9 @@ public class StartupHold {
 	 */
 	public static void main(String[] args) throws Exception {
 		// Loads pastry settings
-		Environment env = new Environment();
 
 		// disable the UPnP setting (in case you are testing this on a NATted LAN)
-		env.getParameters().setString("nat_search_policy", "never");
+		environment.getParameters().setString("nat_search_policy", "never");
 
 		try {
 			// the port to use locally
@@ -134,7 +150,7 @@ public class StartupHold {
 			InetSocketAddress bootaddress = new InetSocketAddress(bootaddr, bootport);
 
 			// launch our node!
-			StartupHold dt = new StartupHold(bindport, bootaddress, env);
+			Startup dt = new Startup(bindport, bootaddress, environment);
 		}
 		catch (Exception e) {
 			// remind user how to use
